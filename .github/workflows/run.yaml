@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: 9527techf/clash:latest
+          tags: 9527tech/clash:latest
