@@ -16,7 +16,7 @@ fi
 if [[ ! -z "$EXTERNAL_BIND" && ! -z "$EXTERNAL_PORT" ]]
 then
   # echo "external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT" >> $ConfFile
-  sed -i 's/external-controller.*/external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT/g' $ConfFile
+  sed -i "s/external-controller.*/external-controller: ${EXTERNAL_BIND}:${EXTERNAL_PORT}/g" $ConfFile
 fi
 # 鉴权信息
 if [[ ! -z "$EXTERNAL_SECRET" ]]
