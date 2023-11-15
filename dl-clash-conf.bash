@@ -15,7 +15,8 @@ fi
 # 写入 API端口
 if [[ ! -z "$EXTERNAL_BIND" && ! -z "$EXTERNAL_PORT" ]]
 then
-  echo "external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT" >> $ConfFile
+  # echo "external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT" >> $ConfFile
+  sed -i 's/external-controller.*/external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT/g'
 fi
 # 鉴权信息
 if [[ ! -z "$EXTERNAL_SECRET" ]]
