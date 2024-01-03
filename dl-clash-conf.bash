@@ -12,6 +12,8 @@ then
   exit $?
 fi
 
+
+
 # 写入 API端口
 if [[ ! -z "$EXTERNAL_BIND" && ! -z "$EXTERNAL_PORT" ]]
 then
@@ -26,3 +28,6 @@ fi
 # 必须开启局域网连接, 否则外部无法连接
 # echo "allow-lan: true" >> $ConfFile
 sed -i 's/allow-lan.*/allow-lan: true/g' $ConfFile
+
+# 启用mixed-port
+sed -i 's/port: 7890/mixed-port: 7890/g' $ConfFile
