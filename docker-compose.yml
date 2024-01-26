@@ -1,0 +1,34 @@
+version: "3"
+services:
+  clash:
+    image: 9527tech/clash
+    container_name: clash
+    ports:
+      - 7890:7890 # mixed-port
+      - 9090:9090 # restful api port
+    environment:
+      - CONF_URL=https://test.com
+      - EXTERNAL_BIND=0.0.0.0
+      - EXTERNAL_PORT=9090
+      - TZ=Aisa/Shanghai
+      - DEFAULT_BACKEND=http://192.168.1.1:9090
+    volumes: []
+    depends_on: []
+    restart: unless-stopped
+    networks:
+      - network_bus
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - homepage.group=Tool
+      - homepage.name=Clash
+      - homepage.icon=clash.png
+      - homepage.href=http://192.168.1.1:9090
+      - homepage.description=Clash Dashboard
+networks:
+  network_bus:
+    external: true
+
