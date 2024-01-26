@@ -12,22 +12,33 @@ then
   exit $?
 fi
 
-
-
 # 写入 API端口
 if [[ ! -z "$EXTERNAL_BIND" && ! -z "$EXTERNAL_PORT" ]]
 then
-  # echo "external-controller: $EXTERNAL_BIND:$EXTERNAL_PORT" >> $ConfFile
-  sed -i "s/external-controller.*/external-controller: ${EXTERNAL_BIND}:${EXTERNAL_PORT}/g" $ConfFile
+  echo "使用监听端口: $EXTERNAL_PORT"
+  yq -i '.external-controller = strenv(EXTERNAL_BIND) + ":" + strenv(EXTERNAL_PORT)' $ConfFile
 fi
+
 # 鉴权信息
 if [[ ! -z "$EXTERNAL_SECRET" ]]
 then
-  echo "secret: \"$EXTERNAL_SECRET\"" >> $ConfFile
+  yq -i '.secret = strenv(EXTERNAL_SECRET)' $ConfFile
 fi
+
+
+yq -i '.external-ui = "/root/ui"' $ConfFile
+
+
+if [[ ! -z "$DEFAULT_BACKEND" ]]
+then
+  echo "修改管理面板默认后端..."
+  sed -i "s|http://127.0.0.1:9090|$DEFAULT_BACKEND|g" /root/ui/assets/Setup-*.js
+fi
+
 # 必须开启局域网连接, 否则外部无法连接
-# echo "allow-lan: true" >> $ConfFile
-sed -i 's/allow-lan.*/allow-lan: true/g' $ConfFile
+echo "启用局域网连接..."
+yq -i '.allow-lan = true' $ConfFile
 
 # 启用mixed-port
-sed -i 's/port: 7890/mixed-port: 7890/g' $ConfFile
+echo "启用mixed-port..."
+yq  -i '(.port | key) = "mixed-port"' $ConfFile
