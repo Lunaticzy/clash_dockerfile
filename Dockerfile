@@ -1,4 +1,4 @@
-FROM debian:10
+FROM alpine:3.9
 
 ARG CLASH_VERSION="v1.18.0"
 ARG METACUBEXD_VERSION="v1.134.0"
@@ -23,10 +23,9 @@ ENV EXTERNAL_PORT "9090"
 # RESTful API 鉴权
 ENV EXTERNAL_SECRET ""
 
-RUN apt-get update -q  \
-    && apt-get install -qq wget \
+RUN apk -U --no-cache add wget \
     curl \
-    && apt-get clean all  \
+    bash \
     && gzip -d /opt/clash-linux-amd64-$CLASH_VERSION.gz \
     && chmod +x /opt/clash-linux-amd64-$CLASH_VERSION \
     && ln -s /opt/clash-linux-amd64-$CLASH_VERSION /bin/clash \
