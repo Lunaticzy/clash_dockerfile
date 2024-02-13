@@ -35,6 +35,9 @@ then
   sed -i "s|http://127.0.0.1:9090|$DEFAULT_BACKEND|g" /root/ui/assets/Setup-*.js
 fi
 
+# 关闭 IPv6
+yq -i '.ipv6 = false' $ConfFile
+
 # 必须开启局域网连接, 否则外部无法连接
 echo "启用局域网连接..."
 yq -i '.allow-lan = true' $ConfFile
