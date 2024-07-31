@@ -32,7 +32,7 @@ RUN apk -U --no-cache add wget \
     && chmod +x /bin/run \
     && chmod +x /bin/update-clash-conf \
     && chmod +x /bin/dl-clash-conf \
-    && chmod +x /bin/yq \
+    && chmod +x /bin/update_config.rb \
     && mkdir /root/ui \
     && tar xf /root/compressed-dist.tgz -C /root/ui \
     && rm /root/compressed-dist.tgz
