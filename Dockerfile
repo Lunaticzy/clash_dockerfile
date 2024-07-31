@@ -8,8 +8,8 @@ ADD https://mirror.ghproxy.com/https://github.com/MetaCubeX/mihomo/releases/down
 ADD https://fastly.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb /root/conf/Country.mmdb
 ADD https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/releases/download/$METACUBEXD_VERSION/compressed-dist.tgz /root/compressed-dist.tgz
 COPY ./scripts/run.bash /bin/run
-COPY ./scriptsdl-clash-conf.bash /bin/dl-clash-conf
-COPY ./scriptsupdate-clash-conf.bash /bin/update-clash-conf
+COPY ./scripts/dl-clash-conf.bash /bin/dl-clash-conf
+COPY ./scripts/update-clash-conf.bash /bin/update-clash-conf
 COPY ./scripts/update-yaml.rb  /bin/update-yaml.rb
 
 # 配置文件地址
