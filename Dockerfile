@@ -10,7 +10,7 @@ ADD https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/releases/
 COPY ./run.bash /bin/run
 COPY ./dl-clash-conf.bash /bin/dl-clash-conf
 COPY ./update-clash-conf.bash /bin/update-clash-conf
-COPY ./update_config.rb  /bin/update_config.rb
+COPY ./update-yaml.rb  /bin/update-yaml.rb
 
 # 配置文件地址
 ENV CONF_URL=http://test.com
@@ -32,7 +32,7 @@ RUN apk -U --no-cache add wget \
     && chmod +x /bin/run \
     && chmod +x /bin/update-clash-conf \
     && chmod +x /bin/dl-clash-conf \
-    && chmod +x /bin/update_config.rb \
+    && chmod +x /bin/update-yaml.rb \
     && mkdir /root/ui \
     && tar xf /root/compressed-dist.tgz -C /root/ui \
     && rm /root/compressed-dist.tgz

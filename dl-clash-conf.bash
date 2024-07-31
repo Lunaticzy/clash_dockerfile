@@ -17,6 +17,6 @@ then
 fi
 
 # 调用 Ruby 脚本来更新配置文件
-update_config.rb "$ConfFile"
+update-config.rb "$ConfFile"
 
 echo "Configuration file updated successfully."
