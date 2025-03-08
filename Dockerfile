@@ -1,12 +1,12 @@
 FROM alpine:3.20
 
-ARG CLASH_VERSION="v1.18.7"
+ARG CLASH_VERSION="v1.19.3"
 ARG METACUBEXD_VERSION="v1.143.5"
 
 
-ADD https://mirror.ghproxy.com/https://github.com/MetaCubeX/mihomo/releases/download/$CLASH_VERSION/mihomo-linux-amd64-compatible-$CLASH_VERSION.gz /opt/clash-linux-amd64-$CLASH_VERSION.gz
+ADD https://ghfast.top/https://github.com/MetaCubeX/mihomo/releases/download/$CLASH_VERSION/mihomo-linux-amd64-compatible-$CLASH_VERSION.gz /opt/clash-linux-amd64-$CLASH_VERSION.gz
 ADD https://fastly.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb /root/conf/Country.mmdb
-ADD https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/releases/download/$METACUBEXD_VERSION/compressed-dist.tgz /root/compressed-dist.tgz
+ADD https://ghfast.top/https://github.com/MetaCubeX/metacubexd/releases/download/$METACUBEXD_VERSION/compressed-dist.tgz /root/compressed-dist.tgz
 COPY ./scripts/run.bash /bin/run
 COPY ./scripts/dl-clash-conf.bash /bin/dl-clash-conf
 COPY ./scripts/update-clash-conf.bash /bin/update-clash-conf
