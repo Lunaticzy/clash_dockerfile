@@ -29,7 +29,7 @@ if config_data.key?('port')
 end
 
 # 其他配置更新
-config_data['external-ui'] = '/root/ui'
+config_data['external-ui'] = '/root/conf/ui'
 config_data['ipv6'] = false
 config_data['allow-lan'] = true
 
