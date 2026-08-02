@@ -4,7 +4,7 @@
 ConfFile=$1
 ConfPath=$(dirname "$ConfFile")
 mkdir -p "$ConfPath"
-wget -O "$ConfFile" "$CONF_URL"
+wget --user-agent="ClashMeta/v1.18.0" -O "$ConfFile" "$CONF_URL"
 if [ $? -ne 0 ]; then
   echo "config file download fail"
   exit 1
