@@ -30,6 +30,12 @@ end
 
 # 其他配置更新
 config_data['external-ui'] = '/root/conf/ui'
+# 固定自动下载的面板版本, 与镜像内置版本保持一致
+metacubexd_version = ENV['METACUBEXD_VERSION']
+if metacubexd_version && !metacubexd_version.empty?
+  config_data['external-ui-url'] =
+    "https://github.com/MetaCubeX/metacubexd/releases/download/#{metacubexd_version}/compressed-dist.tgz"
+end
 config_data['ipv6'] = false
 config_data['allow-lan'] = true
 
