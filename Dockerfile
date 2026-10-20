@@ -7,8 +7,10 @@ ARG APK_MIRROR=""
 
 
 ADD https://ghfast.top/https://github.com/MetaCubeX/mihomo/releases/download/$CLASH_VERSION/mihomo-linux-amd64-compatible-$CLASH_VERSION.gz /opt/clash-linux-amd64-$CLASH_VERSION.gz
-ADD https://fastly.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb /root/conf/Country.mmdb
-ADD https://ghfast.top/https://github.com/MetaCubeX/metacubexd/releases/download/$METACUBEXD_VERSION/compressed-dist.tgz /root/compressed-dist.tgz
+# 内置资源先放在 /opt/clash-assets, 启动时再同步进运行目录 /root/conf,
+# 这样 /root/conf 可以被空 volume 挂载(挂载会遮蔽镜像层里的同名目录)
+ADD https://fastly.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb /opt/clash-assets/Country.mmdb
+ADD https://ghfast.top/https://github.com/MetaCubeX/metacubexd/releases/download/$METACUBEXD_VERSION/compressed-dist.tgz /tmp/compressed-dist.tgz
 COPY ./scripts/run.bash /bin/run
 COPY ./scripts/dl-clash-conf.bash /bin/dl-clash-conf
 COPY ./scripts/update-clash-conf.bash /bin/update-clash-conf
@@ -45,9 +47,8 @@ RUN if [ -n "$APK_MIRROR" ]; then \
     && chmod +x /bin/update-clash-conf \
     && chmod +x /bin/dl-clash-conf \
     && chmod +x /bin/update-yaml.rb \
-    && mkdir -p /root/data \
-    && mkdir /root/conf/ui \
-    && tar xf /root/compressed-dist.tgz -C /root/conf/ui \
-    && rm /root/compressed-dist.tgz
+    && mkdir -p /root/conf /opt/clash-assets/ui \
+    && tar xf /tmp/compressed-dist.tgz -C /opt/clash-assets/ui \
+    && rm /tmp/compressed-dist.tgz
 
 ENTRYPOINT ["run"]

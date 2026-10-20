@@ -24,7 +24,7 @@ services:
       - TZ=Asia/Shanghai
       - DEFAULT_BACKEND=http://your-default-backend-ip:9090 # 端口同 EXTERNAL_PORT
     volumes:
-      - ./data:/root/data # 持久化配置文件
+      - ./conf:/root/conf # 持久化配置/节点记忆/面板
     restart: unless-stopped
 ```
 
@@ -34,9 +34,23 @@ services:
 - `DEFAULT_BACKEND` 用于 UI 中的默认后端地址，如果您不需要修改 UI 中的默认后端，可以忽略此环境变量。
 - 要使用 Clash 的 RESTful API，请确保您的其他软件配置了正确的端口（本例中为 `9090`）。
 
-## 配置文件持久化
+## 目录与持久化
 
-配置文件保存在容器内的 `/root/data/config.yaml`，通过 `./data:/root/data` 挂载到宿主机。这样即使订阅地址临时不可用（例如机场要求先在后台手动开启订阅、订阅到期、网络故障），容器重启后仍可用上一次成功下载的配置启动，不会因为拉不到配置而无法运行。
+容器内的运行目录是 `/root/conf`，所有状态都在这里：
+
+| 路径 | 内容 |
+| --- | --- |
+| `/root/conf/config.yaml` | 订阅配置（下载并改写后） |
+| `/root/conf/cache.db` | 运行状态：节点选择、fake-ip 映射、订阅 ETag |
+| `/root/conf/ui/` | metacubexd 面板 |
+| `/root/conf/Country.mmdb` | GeoIP 库 |
+
+用 `./conf:/root/conf` 挂载出来即可持久化全部状态。这样即使订阅地址临时不可用（例如机场要求先在后台手动开启订阅、订阅到期、网络故障），容器重启后仍可用上一次成功下载的配置启动，不会因为拉不到配置而无法运行。
+
+启动时会从镜像内置资源补齐 `ui/` 与 `Country.mmdb`：
+
+- **面板**：目录里记录的版本与镜像 `METACUBEXD_VERSION` 不一致（或缺失）时重新铺设，保证面板版本与镜像一致；否则保留目录内容，允许你自行替换面板。
+- **Country.mmdb**：仅缺失时补齐，已存在则保留，允许你替换成自己的库。
 
 下载行为：
 
@@ -48,24 +62,16 @@ services:
 
 ## 节点记忆
 
-mihomo 的 `profile.store-selected`（默认开启）会把每个策略组当前选中的节点写入运行目录下的 `cache.db`，重启后恢复。但 `cache.db` 默认在**运行目录**（`/root/conf/`）里，容器重建（升级镜像、`docker compose up -d --force-recreate`）时会随旧容器一起丢掉。
+mihomo 的 `profile.store-selected`（默认开启）会把每个策略组当前选中的节点写入运行目录下的 `cache.db`，重启后恢复。存的是 `组名 → 节点名` 映射，所以订阅更新后只要节点名还在就能恢复。
 
-本镜像在启动时把 `/root/conf/cache.db` 软链到持久化目录：
-
-```
-/root/conf/cache.db -> /root/data/cache.db
-```
-
-因此只要挂了 `./data:/root/data`，以下场景都会记住你选的节点：
+`cache.db` 就在 `/root/conf` 里，因此挂了 `./conf:/root/conf` 后：
 
 | 场景 | 是否记住 |
 | --- | --- |
 | 配置热重载（订阅更新） | ✅ |
 | `docker restart` | ✅ |
 | 重建容器 / 升级镜像 | ✅ |
-| 删除 `data/` 目录 | ❌ 从头开始 |
-
-`cache.db` 里还存 fake-ip 映射、订阅 ETag 等运行状态，一并持久化。
+| 删除 `conf/` 目录 | ❌ 从头开始 |
 
 > 若订阅里显式写了 `profile: {store-selected: false}`，则以订阅为准，节点选择不会被记住。
 
@@ -151,5 +157,5 @@ IMAGE=clash:latest tests/e2e.sh --no-build          # 测已有镜像
 | 运行中订阅失效 | 配置未被覆盖、无残留临时文件、clash 不重启 |
 | 订阅恢复且内容变化 | 配置更新、热重载无 400、新旧节点正确切换 |
 | 订阅不可用时重启 | 沿用旧配置启动，配置未被破坏 |
-| 节点记忆 | `cache.db` 软链到持久化目录；配置重载与容器重建后仍记住所选节点 |
+| 节点记忆 | `cache.db` 位于持久化目录；配置重载与容器重建后仍记住所选节点 |
 

@@ -13,7 +13,7 @@ services:
       - TZ=Asia/Shanghai
       - DEFAULT_BACKEND=http://192.168.1.1:9090
     volumes:
-      - ./data:/root/data # 持久化配置文件, 避免订阅拉取失败时无配置可用
+      - ./conf:/root/conf # 持久化配置/节点记忆/面板
     depends_on: []
     restart: unless-stopped
     networks:

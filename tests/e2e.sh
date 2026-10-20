@@ -12,7 +12,6 @@
 #   8. 节点记忆: 配置重载与容器重建后仍记住所选节点
 #
 # 依赖: docker, python3, curl
-#
 # 用法:
 #   tests/e2e.sh                    # 镜像不存在时自动构建
 #   tests/e2e.sh --build            # 强制重新构建
@@ -54,6 +53,8 @@ FAIL=0
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1
   [[ -n "$MOCK_PID" ]] && kill "$MOCK_PID" >/dev/null 2>&1
+  # 挂载目录里的文件由容器内 root 创建, 需借容器身份清理
+  docker run --rm --entrypoint sh -v "$WORK:/w" "$IMAGE" -c 'rm -rf /w/* /w/.[!.]*' >/dev/null 2>&1
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -107,7 +108,7 @@ done
 
 API="http://127.0.0.1:$API_PORT"
 SUBSCRIPTION="http://$GATEWAY:$MOCK_PORT/sub"
-DATA_DIR="$WORK/data"
+CONF_DIR="$WORK/conf"
 
 echo "镜像=$IMAGE 订阅地址=$SUBSCRIPTION API=$API"
 
@@ -120,24 +121,25 @@ start() {
     -e DEFAULT_BACKEND=http://192.168.1.10:9090 \
     -e TZ=Asia/Shanghai \
     -p "$API_PORT:9090" -p "$PROXY_PORT:7890" \
-    -v "$DATA_DIR:/root/data" "$IMAGE" >/dev/null
+    -v "$CONF_DIR:/root/conf" "$IMAGE" >/dev/null
 }
 
 echo "== 场景1: 订阅不可用 + 无本地配置 -> 重试, 不启动 clash =="
-rm -rf "$DATA_DIR"; mkdir -p "$DATA_DIR"
+rm -rf "$CONF_DIR"; mkdir -p "$CONF_DIR"
 echo html > "$MODE_FILE"
 start; sleep 7
-ck "未生成配置文件" "0" "$(ls "$DATA_DIR" | wc -l)"
+ck "未生成配置文件" "0" "$([[ -f "$CONF_DIR/config.yaml" ]] && echo 1 || echo 0)"
+ck "内置资源已同步到挂载目录" "1" "$([[ -f "$CONF_DIR/Country.mmdb" && -f "$CONF_DIR/ui/index.html" ]] && echo 1 || echo 0)"
 ckge "日志含重试提示" 1 "$(docker logs "$NAME" 2>&1 | grep -c '本地无可用配置')"
 ck "clash 未监听 API" "000" "$(curl -s -o /dev/null -m 2 -w '%{http_code}' "$API/version")"
 
 echo "== 场景2: 机场后台开启订阅 -> 自动恢复并启动 =="
 echo a > "$MODE_FILE"; sleep 8
-ck "配置已落盘" "1" "$([[ -f "$DATA_DIR/config.yaml" ]] && echo 1 || echo 0)"
-ck "配置文件属主 root" "root" "$(stat -c %U "$DATA_DIR/config.yaml")"
+ck "配置已落盘" "1" "$([[ -f "$CONF_DIR/config.yaml" ]] && echo 1 || echo 0)"
+ck "配置文件属主 root" "root" "$(stat -c %U "$CONF_DIR/config.yaml")"
 ck "clash API 可用" "200" "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$API/version")"
 ckge "时区为 CST" 1 "$(docker exec "$NAME" date | grep -c CST)"
-ckge "配置含 test-node-1" 1 "$(grep -c test-node-1 "$DATA_DIR/config.yaml")"
+ckge "配置含 test-node-1" 1 "$(grep -c test-node-1 "$CONF_DIR/config.yaml")"
 
 echo "== 场景3: 订阅请求的 User-Agent =="
 CORE_VERSION=$(docker exec "$NAME" printenv CLASH_VERSION)
@@ -151,18 +153,18 @@ ck "config.js 可访问" "200" "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$
 ckge "config.js 含默认后端" 1 "$(curl -s -m 3 "$API/ui/config.js" | grep -c 'http://192.168.1.10:9090')"
 ck "面板已内置(目录非空)" "1" "$(docker exec "$NAME" sh -c '[ -n "$(ls -A /root/conf/ui)" ] && echo 1 || echo 0')"
 ckge "自动下载被跳过" 1 "$(docker logs "$NAME" 2>&1 | grep -c 'UI already exists')"
-ckge "配置含 external-ui-url" 1 "$(grep -c 'metacubexd/releases/download/' "$DATA_DIR/config.yaml")"
+ckge "配置含 external-ui-url" 1 "$(grep -c 'metacubexd/releases/download/' "$CONF_DIR/config.yaml")"
 
 echo "== 场景5: 运行中订阅失效 -> 保留配置, 不破坏, 不重启 =="
 echo html > "$MODE_FILE"; sleep 10
-ckge "配置未被覆盖" 1 "$(grep -c test-node-1 "$DATA_DIR/config.yaml")"
-ck "无残留临时文件" "0" "$(ls "$DATA_DIR" | grep -c tmp || true)"
+ckge "配置未被覆盖" 1 "$(grep -c test-node-1 "$CONF_DIR/config.yaml")"
+ck "无残留临时文件" "0" "$(ls "$CONF_DIR" | grep -c tmp || true)"
 ck "clash 仍在运行" "200" "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$API/version")"
 ckge "日志含保留提示" 1 "$(docker logs "$NAME" 2>&1 | grep -c '保留当前配置')"
 
 echo "== 场景6: 订阅恢复且内容变化 -> 热重载生效 =="
 echo b > "$MODE_FILE"; sleep 10
-ckge "配置已更新" 1 "$(grep -c test-node-2 "$DATA_DIR/config.yaml")"
+ckge "配置已更新" 1 "$(grep -c test-node-2 "$CONF_DIR/config.yaml")"
 ck "API 无 400" "0" "$(docker logs "$NAME" 2>&1 | grep -c 'curl: (22)')"
 ckge "clash 已加载新节点" 1 "$(curl -s -m 3 "$API/proxies" | grep -c test-node-2)"
 ck "旧节点已消失" "0" "$(curl -s -m 3 "$API/proxies" | grep -c test-node-1)"
@@ -172,18 +174,18 @@ echo html > "$MODE_FILE"
 docker restart "$NAME" >/dev/null; sleep 6
 ckge "沿用旧配置启动" 1 "$(docker logs "$NAME" 2>&1 | grep -c '沿用已有配置')"
 ck "clash API 可用" "200" "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$API/version")"
-ckge "配置未被破坏" 1 "$(grep -c test-node-2 "$DATA_DIR/config.yaml")"
+ckge "配置未被破坏" 1 "$(grep -c test-node-2 "$CONF_DIR/config.yaml")"
 
 echo "== 场景8: 节点记忆 (profile.store-selected) =="
 echo c > "$MODE_FILE"; sleep 10
-ck "cache.db 软链到持久化目录" "/root/data/cache.db" "$(docker exec "$NAME" readlink /root/conf/cache.db)"
+ck "cache.db 位于持久化目录" "1" "$(docker exec "$NAME" sh -c '[ -f /root/conf/cache.db ] && echo 1 || echo 0')"
 ckge "两个节点均已加载" 2 "$(curl -s -m 3 "$API/proxies" | grep -o 'test-node-[12]' | sort -u | wc -l)"
 
 curl -s -m 3 -X PUT -H 'Content-Type: application/json' \
   -d '{"name":"test-node-2"}' "$API/proxies/PROXY" >/dev/null
 sleep 1
 ck "节点已切换" "test-node-2" "$(curl -s -m 3 "$API/proxies/PROXY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["now"])')"
-ck "cache.db 已落盘到持久化目录" "1" "$([[ -s "$DATA_DIR/cache.db" ]] && echo 1 || echo 0)"
+ck "cache.db 已落盘到持久化目录" "1" "$([[ -s "$CONF_DIR/cache.db" ]] && echo 1 || echo 0)"
 
 echo "  -- 8a: 配置重载后仍记住 --"
 echo d > "$MODE_FILE"; sleep 10

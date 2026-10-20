@@ -1,10 +1,27 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# clash 运行目录(镜像内置: Country.mmdb / ui)
+# clash 运行目录, 也是持久化目录(由 volume 挂载):
+# 配置 config.yaml / 运行状态 cache.db / 面板 ui / Country.mmdb 都在这里
 ClashDir="/root/conf"
-# 配置文件(持久化目录, 由 volume 挂载)
-ConfFile="/root/data/config.yaml"
+# 镜像内置资源(挂载会遮蔽 /root/conf, 启动时从这里补齐)
+AssetsDir="/opt/clash-assets"
+ConfFile="$ClashDir/config.yaml"
+UiDir="$ClashDir/ui"
+UiStamp="$UiDir/.metacubexd-version"
+
+mkdir -p "$ClashDir"
+
+# 面板: 版本不符或缺失时用镜像内置版本铺设, 否则保留(允许用户自行替换)
+if [[ "$(cat "$UiStamp" 2>/dev/null)" != "${METACUBEXD_VERSION:-}" ]]; then
+  echo "铺设内置面板 ${METACUBEXD_VERSION:-unknown} ..."
+  rm -rf "$UiDir"
+  cp -r "$AssetsDir/ui" "$UiDir"
+  printf '%s' "${METACUBEXD_VERSION:-}" > "$UiStamp"
+fi
+
+# 地理库: 缺失时补齐, 已存在则保留(允许用户自行替换)
+[ -e "$ClashDir/Country.mmdb" ] || cp "$AssetsDir/Country.mmdb" "$ClashDir/Country.mmdb"
 
 # 首次下载; 失败且本地已有配置时沿用旧配置启动, 否则重试
 until dl-clash-conf "$ConfFile"; do
@@ -23,10 +40,5 @@ then
 fi
 
 # 启动代理
-# cache.db 存运行状态(节点选择 profile.store-selected / fake-ip / etag 等),
-# mihomo 默认写在运行目录, 容器重建(如升级镜像)会丢; 软链到持久化目录保住节点选择
-ln -sf "$(dirname "$ConfFile")/cache.db" "$ClashDir/cache.db"
-
-# SAFE_PATHS: 允许 RESTful API 读写配置目录, 否则热重载会被拒绝(path is not subpath of home directory)
-export SAFE_PATHS="$(dirname "$ConfFile"):$ClashDir"
+# 配置与 cache.db 都在运行目录内, 无需额外设置 SAFE_PATHS
 exec clash -d $ClashDir -f $ConfFile
