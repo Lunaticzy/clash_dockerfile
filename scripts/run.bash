@@ -23,6 +23,10 @@ then
 fi
 
 # 启动代理
+# cache.db 存运行状态(节点选择 profile.store-selected / fake-ip / etag 等),
+# mihomo 默认写在运行目录, 容器重建(如升级镜像)会丢; 软链到持久化目录保住节点选择
+ln -sf "$(dirname "$ConfFile")/cache.db" "$ClashDir/cache.db"
+
 # SAFE_PATHS: 允许 RESTful API 读写配置目录, 否则热重载会被拒绝(path is not subpath of home directory)
 export SAFE_PATHS="$(dirname "$ConfFile"):$ClashDir"
 exec clash -d $ClashDir -f $ConfFile

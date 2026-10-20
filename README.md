@@ -46,6 +46,29 @@ services:
 - 运行期间按 `UPDATE_INTERVAL` 定时更新，更新失败时保留当前配置、不触发热重载。
 - 订阅请求的 `User-Agent` 为 `clash.meta/<核心版本>`（如 `clash.meta/v1.19.32`），与 mihomo 自身请求所用 UA 一致。部分机场按 UA 下发不同配置，因此该值随 `CLASH_VERSION` 构建参数自动跟随，不再硬编码。
 
+## 节点记忆
+
+mihomo 的 `profile.store-selected`（默认开启）会把每个策略组当前选中的节点写入运行目录下的 `cache.db`，重启后恢复。但 `cache.db` 默认在**运行目录**（`/root/conf/`）里，容器重建（升级镜像、`docker compose up -d --force-recreate`）时会随旧容器一起丢掉。
+
+本镜像在启动时把 `/root/conf/cache.db` 软链到持久化目录：
+
+```
+/root/conf/cache.db -> /root/data/cache.db
+```
+
+因此只要挂了 `./data:/root/data`，以下场景都会记住你选的节点：
+
+| 场景 | 是否记住 |
+| --- | --- |
+| 配置热重载（订阅更新） | ✅ |
+| `docker restart` | ✅ |
+| 重建容器 / 升级镜像 | ✅ |
+| 删除 `data/` 目录 | ❌ 从头开始 |
+
+`cache.db` 里还存 fake-ip 映射、订阅 ETag 等运行状态，一并持久化。
+
+> 若订阅里显式写了 `profile: {store-selected: false}`，则以订阅为准，节点选择不会被记住。
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
@@ -128,4 +151,5 @@ IMAGE=clash:latest tests/e2e.sh --no-build          # 测已有镜像
 | 运行中订阅失效 | 配置未被覆盖、无残留临时文件、clash 不重启 |
 | 订阅恢复且内容变化 | 配置更新、热重载无 400、新旧节点正确切换 |
 | 订阅不可用时重启 | 沿用旧配置启动，配置未被破坏 |
+| 节点记忆 | `cache.db` 软链到持久化目录；配置重载与容器重建后仍记住所选节点 |
 

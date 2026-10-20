@@ -5,6 +5,8 @@
 
     a     返回 fixtures/sub-a.yaml (含 test-node-1)
     b     返回 fixtures/sub-b.yaml (含 test-node-2)
+    c     返回 fixtures/sub-c.yaml (含 test-node-1/2, 可切换选择)
+    d     同 c 但 log-level 不同 (用于证明配置确实被重载)
     403   返回 HTTP 403
     html  返回 HTTP 200 + HTML 页面 (模拟"请先登录后台开启订阅")
     其它  同 html
@@ -25,6 +27,8 @@ HTML_BODY = (
 FIXTURES = {
     "a": "sub-a.yaml",
     "b": "sub-b.yaml",
+    "c": "sub-c.yaml",
+    "d": "sub-d.yaml",
 }
 
 

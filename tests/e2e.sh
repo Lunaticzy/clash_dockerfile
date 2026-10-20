@@ -9,6 +9,7 @@
 #   5. 运行中订阅失效 -> 保留配置, 不破坏, 不重启
 #   6. 订阅恢复且内容变化 -> 热重载生效
 #   7. 订阅不可用时重启容器 -> 沿用旧配置启动
+#   8. 节点记忆: 配置重载与容器重建后仍记住所选节点
 #
 # 依赖: docker, python3, curl
 #
@@ -172,6 +173,27 @@ docker restart "$NAME" >/dev/null; sleep 6
 ckge "沿用旧配置启动" 1 "$(docker logs "$NAME" 2>&1 | grep -c '沿用已有配置')"
 ck "clash API 可用" "200" "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$API/version")"
 ckge "配置未被破坏" 1 "$(grep -c test-node-2 "$DATA_DIR/config.yaml")"
+
+echo "== 场景8: 节点记忆 (profile.store-selected) =="
+echo c > "$MODE_FILE"; sleep 10
+ck "cache.db 软链到持久化目录" "/root/data/cache.db" "$(docker exec "$NAME" readlink /root/conf/cache.db)"
+ckge "两个节点均已加载" 2 "$(curl -s -m 3 "$API/proxies" | grep -o 'test-node-[12]' | sort -u | wc -l)"
+
+curl -s -m 3 -X PUT -H 'Content-Type: application/json' \
+  -d '{"name":"test-node-2"}' "$API/proxies/PROXY" >/dev/null
+sleep 1
+ck "节点已切换" "test-node-2" "$(curl -s -m 3 "$API/proxies/PROXY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["now"])')"
+ck "cache.db 已落盘到持久化目录" "1" "$([[ -s "$DATA_DIR/cache.db" ]] && echo 1 || echo 0)"
+
+echo "  -- 8a: 配置重载后仍记住 --"
+echo d > "$MODE_FILE"; sleep 10
+ck "配置确实被重载(log-level 变化)" "warning" "$(curl -s -m 3 "$API/configs" | python3 -c 'import json,sys; print(json.load(sys.stdin)["log-level"])')"
+ck "重载后仍记住节点" "test-node-2" "$(curl -s -m 3 "$API/proxies/PROXY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["now"])')"
+
+echo "  -- 8b: 重建容器后仍记住 (等价于升级镜像) --"
+docker rm -f "$NAME" >/dev/null 2>&1
+start; sleep 8
+ck "重建后仍记住节点" "test-node-2" "$(curl -s -m 3 "$API/proxies/PROXY" | python3 -c 'import json,sys; print(json.load(sys.stdin)["now"])')"
 
 echo
 echo "结果: PASS=$PASS FAIL=$FAIL"
