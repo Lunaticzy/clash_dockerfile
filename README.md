@@ -84,6 +84,10 @@ http://<您的服务器IP>:9090/ui
 
   这是 metacubexd **v1.215.0+** 的配置方式。旧版本（v1.220.0 之前打包产物中的 `assets/Setup-*.js`）已不再使用，因此 `METACUBEXD_VERSION` 不应低于 `v1.215.0`。
 
+  该值不只是预填输入框：浏览器首次打开面板（本地无已保存后端）时会**自动连接**，直接进入概览页，无需手动点 Connect。已保存的后端不可达时也会回落到它。
+
+  > `DEFAULT_BACKEND` 必须是**浏览器**能访问到的地址，不是容器内能访问到的地址。填 `127.0.0.1:9090` 或容器名只在浏览器与容器同机时才成立；跨机访问要填宿主机 IP 或对外域名。
+
 - mihomo 自身也支持自动下载面板（`external-ui-url`，仅在 `external-ui` 目录为空时触发）。镜像已内置面板，启动日志会显示 `UI already exists, skip downloading`，不会覆盖内置版本。若你用一个空目录挂载覆盖 `/root/conf/ui`，mihomo 会按 `external-ui-url` 下载——该地址已被固定为与镜像相同的 `METACUBEXD_VERSION`，保证版本一致。
 
 ## 自行构建镜像
